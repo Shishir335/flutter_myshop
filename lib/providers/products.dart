@@ -1,8 +1,9 @@
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:myshop/models/http_exception.dart';
+import 'package:http/http.dart' as http;
+
+import '../models/http_exception.dart';
 import './product.dart';
 
 class Products with ChangeNotifier {
@@ -21,31 +22,34 @@ class Products with ChangeNotifier {
     //   description: 'A nice pair of trousers.',
     //   price: 59.99,
     //   imageUrl:
-    //       'https://ecstasybd.com/images/thumbs/0005410_tanjim-trouser.jpeg',
+    //       'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Trousers%2C_dress_%28AM_1960.022-8%29.jpg/512px-Trousers%2C_dress_%28AM_1960.022-8%29.jpg',
     // ),
     // Product(
     //   id: 'p3',
-    //   title: 'Yellow Shirt',
-    //   description: 'A nice pair of Yellow Shirt.',
-    //   price: 79.99,
+    //   title: 'Yellow Scarf',
+    //   description: 'Warm and cozy - exactly what you need for the winter.',
+    //   price: 19.99,
     //   imageUrl:
-    //       'https://cdn.shopify.com/s/files/1/0091/0707/9273/products/AFPX9833_2_2048x.jpg?v=1564735585',
+    //       'https://live.staticflickr.com/4043/4438260868_cc79b3369d_z.jpg',
     // ),
     // Product(
     //   id: 'p4',
-    //   title: 'Black Jins',
-    //   description: 'A nice pair of Black Jins.',
-    //   price: 89.99,
+    //   title: 'A Pan',
+    //   description: 'Prepare any meal you want.',
+    //   price: 49.99,
     //   imageUrl:
-    //       'https://d4zpg1jklewne.cloudfront.net/steak/spree-variant/mens-skinny-jeans-in-faded-black-3/mens-faded-black-skinny-jeans-1-product.jpg?1527794179',
+    //       'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Cast-Iron-Pan.jpg/1024px-Cast-Iron-Pan.jpg',
     // ),
   ];
-  var _showFavoritesOnly = false;
+  // var _showFavoritesOnly = false;
+  final String authToken;
+
+  Products(this.authToken, this._items);
 
   List<Product> get items {
-    if (_showFavoritesOnly) {
-      return _items.where((prodItem) => prodItem.isFavorite).toList();
-    }
+    // if (_showFavoritesOnly) {
+    //   return _items.where((prodItem) => prodItem.isFavorite).toList();
+    // }
     return [..._items];
   }
 
@@ -57,7 +61,7 @@ class Products with ChangeNotifier {
     return _items.firstWhere((prod) => prod.id == id);
   }
 
-  // void shoeFavoritesOnly() {
+  // void showFavoritesOnly() {
   //   _showFavoritesOnly = true;
   //   notifyListeners();
   // }
@@ -68,35 +72,35 @@ class Products with ChangeNotifier {
   // }
 
   Future<void> fetchAndSetProducts() async {
-    const url = 'https://flutter-update-b468a.firebaseio.com/products.json';
+    final url =
+        'https://flutter-update-b468a.firebaseio.com/products.json?auth=$authToken';
     try {
       final response = await http.get(url);
       final extractedData = json.decode(response.body) as Map<String, dynamic>;
       if (extractedData == null) {
         return;
       }
-      final List<Product> loadedProduct = [];
+      final List<Product> loadedProducts = [];
       extractedData.forEach((prodId, prodData) {
-        loadedProduct.add(
-          Product(
-            id: prodId,
-            title: prodData['title'],
-            description: prodData['description'],
-            price: prodData['price'],
-            isFavorite: prodData['isFavorite'],
-            imageUrl: prodData['imageUrl'],
-          ),
-        );
+        loadedProducts.add(Product(
+          id: prodId,
+          title: prodData['title'],
+          description: prodData['description'],
+          price: prodData['price'],
+          isFavorite: prodData['isFavorite'],
+          imageUrl: prodData['imageUrl'],
+        ));
       });
-      _items = loadedProduct;
+      _items = loadedProducts;
       notifyListeners();
     } catch (error) {
-      throw error;
+      throw (error);
     }
   }
 
   Future<void> addProduct(Product product) async {
-    const url = 'https://flutter-update-b468a.firebaseio.com/products.json';
+    final url =
+        'https://flutter-update-b468a.firebaseio.com/products.json?auth=$authToken';
     try {
       final response = await http.post(
         url,
@@ -116,7 +120,7 @@ class Products with ChangeNotifier {
         id: json.decode(response.body)['name'],
       );
       _items.add(newProduct);
-      //_items.insert(0, newProduct); //at the start of the list..
+      // _items.insert(0, newProduct); // at the start of the list
       notifyListeners();
     } catch (error) {
       print(error);
@@ -128,13 +132,13 @@ class Products with ChangeNotifier {
     final prodIndex = _items.indexWhere((prod) => prod.id == id);
     if (prodIndex >= 0) {
       final url =
-          'https://flutter-update-b468a.firebaseio.com/products/$id.json';
+          'https://flutter-update-b468a.firebaseio.com/products/$id.json?auth=$authToken';
       await http.patch(url,
           body: json.encode({
             'title': newProduct.title,
             'description': newProduct.description,
             'imageUrl': newProduct.imageUrl,
-            'price': newProduct.price,
+            'price': newProduct.price
           }));
       _items[prodIndex] = newProduct;
       notifyListeners();
@@ -144,7 +148,8 @@ class Products with ChangeNotifier {
   }
 
   Future<void> deleteProduct(String id) async {
-    final url = 'https://flutter-update-b468a.firebaseio.com/products/$id.json';
+    final url =
+        'https://flutter-update-b468a.firebaseio.com/products/$id.json?auth=$authToken';
     final existingProductIndex = _items.indexWhere((prod) => prod.id == id);
     var existingProduct = _items[existingProductIndex];
     _items.removeAt(existingProductIndex);
